@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package pac;
 
 import java.util.ArrayList;
@@ -12,20 +7,15 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 /**
@@ -63,6 +53,10 @@ public class Pac extends Application {
     static Node[][] nodeBoard = new Node[boardSize][boardSize];
     static Ghosts ghost = new Ghosts(6 * 51, 5 * 1, 6, 5);
     static ArrayList<Ghosts> arrayGhost = new ArrayList<Ghosts>();
+
+    //Helps pacman eat the ghosts!
+    static boolean powerUp = false;
+    static int powerUpTime = 1;
 
     static int numberOfGhosts = 4;
 
@@ -151,6 +145,7 @@ public class Pac extends Application {
 
             @Override
             public void handle(long now) {
+                if(pacman.lives >0 && !pacWin()){
                 updatePacSpot();
                 //the different numbers being muiltiplied to the movementSpeed are applying offsets for collision! 
                 if (dwalk && (pacman.x + movementSpeedX < width) && checkIfValidMove(movementSpeedX * 6, 0)) {
@@ -177,12 +172,73 @@ public class Pac extends Application {
                 }
                 drawCanvas();
                 frame++;
+
+                for (int i = 0; i < arrayGhost.size(); i++) {
+                    if (arrayGhost.get(i).arrX == 5 && arrayGhost.get(i).arrY == 6 && arrayGhost.get(i).eaten == true) {
+                        arrayGhost.get(i).eaten = false;
+                    }
+                }
+                eatGhosts();
+
+                if (powerUpTime % 200 == 0) {
+                    powerUp = false;
+                }
+                if (powerUp == true) {
+                    powerUpTime++;
+                } else {
+                    powerUpTime = 1;
+                }
+            }
             }
         }.start();
 
         primaryStage.setScene(scene);
         primaryStage.show();
 
+    }
+public boolean pacWin()
+{
+    for(int i =0; i < 14;i++)
+    {
+        for(int j =0; j<14;j++)
+        {
+            if(nodeBoard[i][j] != null)
+            {
+                if(nodeBoard[i][j].searched == false)
+                {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+    public void eatGhosts() {
+
+        if (powerUp) {
+            for (int i = 0; i < arrayGhost.size(); i++) {
+                if (arrayGhost.get(i).arrX == pacman.arrX && arrayGhost.get(i).arrY == pacman.arrY) {
+                    arrayGhost.get(i).eaten = true;
+                }
+            }
+        } else {
+            for (int i = 0; i < arrayGhost.size(); i++) {
+                if (arrayGhost.get(i).arrX == pacman.arrX && arrayGhost.get(i).arrY == pacman.arrY) {
+                    if(arrayGhost.get(i).eaten == false)
+                    {
+                    System.out.println("YOU HAVE BEEN KILLED!");
+                    if (pacman.lives > 0) {
+                        pacman.lives--;
+                        pacman.arrX = 0;
+                        pacman.arrY = 0;
+                        pacman.x = 0;
+                        pacman.y = 0;
+
+                    }
+                }
+                }
+            }
+        }
     }
 // this function will be incharge of moving the ghosts around the map so that they can find pacman!
 
@@ -192,8 +248,36 @@ public class Pac extends Application {
             int distanceX = arrayGhost.get(i).arrX - pacman.arrX;
             int distanceY = arrayGhost.get(i).arrY - pacman.arrY;
             double totalDis = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-            if (totalDis <= 6) {
-                Node nextSpot = aStar(nodeBoard[pacman.arrX][pacman.arrY], nodeBoard[arrayGhost.get(i).arrX][arrayGhost.get(i).arrY]);
+            if (arrayGhost.get(i).eaten == false) {
+                if (totalDis <= 6) {
+                    Node nextSpot = aStar(nodeBoard[pacman.arrX][pacman.arrY], nodeBoard[arrayGhost.get(i).arrX][arrayGhost.get(i).arrY]);
+
+                    if (nextSpot != null) {
+                        if (arrayGhost.get(i).arrX - 1 == nextSpot.x && arrayGhost.get(i).arrY == nextSpot.y) {
+                            arrayGhost.get(i).moveGhost(0, -ghostSpeed);
+                        } else if (arrayGhost.get(i).arrX + 1 == nextSpot.x && arrayGhost.get(i).arrY == nextSpot.y) {
+                            arrayGhost.get(i).moveGhost(0, ghostSpeed);
+
+                        } else if (arrayGhost.get(i).arrX == nextSpot.x && arrayGhost.get(i).arrY + 1 == nextSpot.y) {
+                            arrayGhost.get(i).moveGhost(ghostSpeed, 0);
+
+                        } else if (arrayGhost.get(i).arrX == nextSpot.x && arrayGhost.get(i).arrY - 1 == nextSpot.y) {
+                            arrayGhost.get(i).moveGhost(-ghostSpeed, 0);
+
+                        }
+                        arrayGhost.get(i).arrX = ((int) (arrayGhost.get(i).y)) / (squareSize + offset);
+                        arrayGhost.get(i).arrY = ((int) (arrayGhost.get(i).x)) / (squareSize + offset);
+                    }
+
+                } else {
+                    lostThePlayer(arrayGhost.get(i));
+                }
+            } else {
+                Node nextSpot = aStar(nodeBoard[6][5], nodeBoard[arrayGhost.get(i).arrX][arrayGhost.get(i).arrY]);
+                if (nextSpot == null) {
+                    arrayGhost.get(i).eaten = false;
+                }
+//                System.out.println(nextSpot.x+" "+ nextSpot.y +" GHOST: "+arrayGhost.get(i).arrX+" "+arrayGhost.get(i).arrY );
                 if (nextSpot != null) {
                     if (arrayGhost.get(i).arrX - 1 == nextSpot.x && arrayGhost.get(i).arrY == nextSpot.y) {
                         arrayGhost.get(i).moveGhost(0, -ghostSpeed);
@@ -210,9 +294,7 @@ public class Pac extends Application {
                     arrayGhost.get(i).arrX = ((int) (arrayGhost.get(i).y)) / (squareSize + offset);
                     arrayGhost.get(i).arrY = ((int) (arrayGhost.get(i).x)) / (squareSize + offset);
                 }
-
-            } else {
-                lostThePlayer(arrayGhost.get(i));
+                //GHOST HAS BEEN EATEN GO TO THE START!
             }
         }
         // System.out.println("POINTX: " + arrayGhost.get(0).x + " POINTY: " + arrayGhost.get(0).y + " xARG: " + arrayGhost.get(0).arrX + " yARG: " + arrayGhost.get(0).arrY);
@@ -272,12 +354,6 @@ public class Pac extends Application {
     }
 
     public static void makeGhosts() {
-        /*
-        for (int i = 0; i < numberOfGhosts; i++) {
-            Ghosts ghost = new Ghosts(272.0 + 60 * i, 320.0, 6, 5);
-            arrayGhost.add(ghost);
-        }
-         */
 
         Ghosts ghost = new Ghosts(272.0, 320.0, 6, 5);
         arrayGhost.add(ghost);
@@ -303,6 +379,9 @@ public class Pac extends Application {
         }
 
         //DETECTS IF YOU ALREADY EXPLORED GROUND AND YOU COLLECT POINTS
+        if (((x == 13 && y == 0) || (x == 13 && y == 13) || (x == 0 && y == 13)) && nodeBoard[y][x].searched == false) {
+            powerUp = true;
+        }
         nodeBoard[y][x].searched = true;
         pacman.points += nodeBoard[y][x].point;
         nodeBoard[y][x].updatePoint();
@@ -434,7 +513,12 @@ public class Pac extends Application {
                 if (nodeBoard[i][j] != null) {
                     if (nodeBoard[i][j].searched == false) {
                         gc.setFill(Color.WHITE);
-                        gc.fillOval(j * 51 + 20, i * 51 + 20, 7, 7);
+                        if (((i == 13 && j == 0) || (i == 13 && j == 13) || (i == 0 && j == 13))) {
+                            gc.fillOval(j * 51 + 20, i * 51 + 20, 14, 14);
+
+                        } else {
+                            gc.fillOval(j * 51 + 20, i * 51 + 20, 7, 7);
+                        }
                     }
                 }
             }
@@ -442,26 +526,57 @@ public class Pac extends Application {
         for (int i = 0; i < arrayGhost.size(); i++) {
 
             if (i == 0) {
-                gc.setFill(Color.RED);
-                gc.fillArc(arrayGhost.get(i).x - 15, arrayGhost.get(i).y - 10, 35, 75, 0, 180, ArcType.ROUND);
+                if (powerUp) {
+                    gc.setFill(Color.BLUE);
+
+                } else {
+                    gc.setFill(Color.RED);
+                }
+                if (arrayGhost.get(i).eaten == false) {
+                    gc.fillArc(arrayGhost.get(i).x - 15, arrayGhost.get(i).y - 10, 35, 75, 0, 180, ArcType.ROUND);
+                    gc.setFill(Color.GREEN);
+
+                }
                 gc.setFill(Color.WHITE);
                 gc.fillOval(arrayGhost.get(i).x - 5, arrayGhost.get(i).y, 5, 5);
                 gc.fillOval(arrayGhost.get(i).x + 5, arrayGhost.get(i).y, 5, 5);
             } else if (i == 1) {
-                gc.setFill(Color.GREEN);
-                gc.fillArc(arrayGhost.get(i).x - 15, arrayGhost.get(i).y - 10, 35, 75, 0, 180, ArcType.ROUND);
+                if (powerUp) {
+                    gc.setFill(Color.BLUE);
+
+                } else {
+                    gc.setFill(Color.GREEN);
+                }
+                if (arrayGhost.get(i).eaten == false) {
+                    gc.fillArc(arrayGhost.get(i).x - 15, arrayGhost.get(i).y - 10, 35, 75, 0, 180, ArcType.ROUND);
+                }
                 gc.setFill(Color.WHITE);
                 gc.fillOval(arrayGhost.get(i).x - 5, arrayGhost.get(i).y, 5, 5);
                 gc.fillOval(arrayGhost.get(i).x + 5, arrayGhost.get(i).y, 5, 5);
             } else if (i == 2) {
-                gc.setFill(Color.ORANGE);
-                gc.fillArc(arrayGhost.get(i).x - 15, arrayGhost.get(i).y - 10, 35, 75, 0, 180, ArcType.ROUND);
+
+                if (powerUp) {
+                    gc.setFill(Color.BLUE);
+
+                } else {
+                    gc.setFill(Color.ORANGE);
+                }
+                if (arrayGhost.get(i).eaten == false) {
+                    gc.fillArc(arrayGhost.get(i).x - 15, arrayGhost.get(i).y - 10, 35, 75, 0, 180, ArcType.ROUND);
+                }
                 gc.setFill(Color.WHITE);
                 gc.fillOval(arrayGhost.get(i).x - 5, arrayGhost.get(i).y, 5, 5);
                 gc.fillOval(arrayGhost.get(i).x + 5, arrayGhost.get(i).y, 5, 5);
             } else if (i == 3) {
-                gc.setFill(Color.PINK);
-                gc.fillArc(arrayGhost.get(i).x - 15, arrayGhost.get(i).y - 10, 35, 75, 0, 180, ArcType.ROUND);
+                if (powerUp) {
+                    gc.setFill(Color.BLUE);
+
+                } else {
+                    gc.setFill(Color.PINK);
+                }
+                if (arrayGhost.get(i).eaten == false) {
+                    gc.fillArc(arrayGhost.get(i).x - 15, arrayGhost.get(i).y - 10, 35, 75, 0, 180, ArcType.ROUND);
+                }
                 gc.setFill(Color.WHITE);
                 gc.fillOval(arrayGhost.get(i).x - 5, arrayGhost.get(i).y, 5, 5);
                 gc.fillOval(arrayGhost.get(i).x + 5, arrayGhost.get(i).y, 5, 5);
