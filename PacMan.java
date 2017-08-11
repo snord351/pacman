@@ -4,7 +4,6 @@
  * and open the template in the editor.
  */
 package pac;
-
 /**
  *
  * @author snord
@@ -18,6 +17,7 @@ public class PacMan
     int oldX;
     int oldY;
     int points =0;
+    int lives =3;
     public PacMan (double currentx , double currentY)
     {
         this.x = currentx;
