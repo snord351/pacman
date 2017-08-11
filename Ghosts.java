@@ -4,7 +4,6 @@
  * and open the template in the editor.
  */
 package pac;
-
 import java.util.HashMap;
 
 /**
@@ -17,7 +16,7 @@ public class Ghosts {
     double y;
     int arrX;
     int arrY;
-
+    boolean eaten = false;
     int randomX = 5;
     int randomY = 6;
 
